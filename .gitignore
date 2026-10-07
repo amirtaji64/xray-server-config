@@ -1,0 +1,7 @@
+# Never commit secrets or generated server files
+config.json
+warp-account.json
+wgcf-*
+*.dat
+*.exe
+*.zip

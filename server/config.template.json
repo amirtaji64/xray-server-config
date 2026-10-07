@@ -1,0 +1,54 @@
+{
+  "log": { "loglevel": "warning" },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": __PORT__,
+      "protocol": "vless",
+      "settings": {
+        "clients": [{ "id": "__UUID__" }],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": { "path": "__WS_PATH__" }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"],
+        "routeOnly": true
+      }
+    }
+  ],
+  "outbounds": [
+    { "tag": "direct", "protocol": "freedom" },
+    {
+      "tag": "warp",
+      "protocol": "wireguard",
+      "settings": {
+        "secretKey": "__WARP_PRIVATE_KEY__",
+        "address": ["__WARP_V4__/32", "__WARP_V6__/128"],
+        "peers": [
+          {
+            "publicKey": "__WARP_PEER_PUBLIC_KEY__",
+            "endpoint": "engage.cloudflareclient.com:2408",
+            "allowedIPs": ["0.0.0.0/0", "::/0"]
+          }
+        ],
+        "mtu": 1280,
+        "reserved": __WARP_RESERVED__,
+        "domainStrategy": "ForceIPv4"
+      }
+    }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "domain": ["geosite:google", "domain:ipinfo.io"],
+        "outboundTag": "warp"
+      }
+    ]
+  }
+}
