@@ -1,84 +1,66 @@
-# Xray server config (VLESS + WebSocket + Cloudflare + WARP)
+# Xray server installer (VLESS + WebSocket + Cloudflare + WARP)
 
-راه‌اندازی دوباره سرور VPN روی یک ویندوز سرور جدید، با یک اسکریپت.
+نصب سرور VPN روی یک **ویندوز سرور کاملاً خالی** با **یک دستور**.
 
-## معماری
+## نصب (فقط همین)
 
-```
-کلاینت (v2rayN / موبایل)
-   │  VLESS + WS + TLS  (fingerprint: firefox)
-   ▼
-Cloudflare  (node.helpforyou.ir، ابر نارنجی، SSL: Flexible)
-   │  HTTP پورت 80
-   ▼
-ویندوز سرور  ── Xray
-   ├── geosite:google  ──► Cloudflare WARP (داخل خود Xray، WireGuard)
-   └── بقیه ترافیک      ──► مستقیم از IP سرور
+روی سرور، **PowerShell را با Run as Administrator** باز کنید و این یک خط را بزنید. فقط `<UUID>` و `<DOMAIN>` را عوض کنید:
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol='Tls12'; & ([scriptblock]::Create((irm https://raw.githubusercontent.com/amirtaji64/xray-server-config/main/install.ps1))) -Uuid <UUID> -Domain <DOMAIN>
 ```
 
-ترافیک گوگل از WARP عبور می‌کند چون گوگل IP بعضی دیتاسنترها (مثل Hostkey) را تحریمی می‌شناسد و خطای 403 می‌دهد.
+- `<UUID>`: همان UUID که الان در v2rayN دارید. **همیشه همان قبلی را بدهید** تا کلاینت‌ها عوض نشوند.
+- `<DOMAIN>`: ساب‌دامنه‌ای که در Cloudflare به سرور اشاره می‌کند. فقط برای ساخت لینک آخر کار است.
 
-## نصب روی سرور جدید
+به Git یا دانلود zip نیازی نیست. دوباره اجرا کردن دستور هم مشکلی ایجاد نمی‌کند (کانفیگ قبلی بکاپ گرفته می‌شود).
 
-1. روی سرور **PowerShell را با Run as Administrator** باز کنید.
-2. ریپازیتوری را دانلود کنید (Code ← Download ZIP) و از حالت فشرده خارج کنید، یا:
-   ```powershell
-   git clone https://github.com/<USER>/xray-server-config.git C:\xray-server-config
-   ```
-3. اسکریپت را اجرا کنید. **UUID قبلی را بدهید** تا کانفیگ کلاینت‌ها عوض نشود:
-   ```powershell
-   Set-ExecutionPolicy -Scope Process Bypass -Force
-   C:\xray-server-config\server\install.ps1 -Uuid <UUID-قبلی>
-   ```
-   اسکریپت خودش این کارها را می‌کند:
-   - آخرین نسخه Xray را از گیت‌هاب رسمی XTLS دانلود می‌کند و در `C:\Xray` می‌گذارد.
-   - یک اکانت رایگان WARP می‌سازد (در `C:\Xray\warp-account.json`).
-   - `config.json` را می‌سازد و تست می‌کند.
-   - پورت 80 را در فایروال باز می‌کند و تسک `Xray` را برای اجرای خودکار با روشن شدن ویندوز می‌سازد.
-4. در **Cloudflare** رکورد `node` را به IP سرور جدید تغییر دهید (ابر نارنجی بماند).
+اسکریپت این کارها را انجام می‌دهد:
+1. آخرین نسخه رسمی Xray را در `C:\Xray` نصب می‌کند.
+2. یک اکانت رایگان Cloudflare WARP می‌سازد و ترافیک گوگل را از آن عبور می‌دهد. اگر این مرحله شکست بخورد، بدون WARP ادامه می‌دهد.
+3. `config.json` را با UUID شما می‌سازد و تست می‌کند.
+4. پورت 80 را باز می‌کند، هر Xray در حال اجرا را می‌بندد، تسک اجرای خودکار را می‌سازد، Xray را اجرا می‌کند و **بررسی می‌کند که واقعاً روی پورت 80 گوش می‌دهد**.
+5. IP سرور و **لینک آماده کلاینت** را چاپ می‌کند.
 
-پارامترهای اختیاری: `-WsPath` (پیش‌فرض `/api/v1/stream`)، `-Port` (پیش‌فرض 80)، `-InstallDir` (پیش‌فرض `C:\Xray`)، `-UpdateXray` (به‌روزرسانی Xray)، `-SkipTask`.
+پارامترهای اختیاری: `-WsPath` (پیش‌فرض `/api/v1/stream`)، `-Port` (پیش‌فرض 80)، `-NoWarp`، `-UpdateXray`، `-InstallDir` (پیش‌فرض `C:\Xray`).
 
-> UUID و کلید WARP عمداً در این ریپازیتوری **نیستند**. UUID را جای امنی نگه دارید (مثلاً در پسورد منیجر).
-
-## تنظیمات Cloudflare
+## بعد از نصب: Cloudflare
 
 | تنظیم | مقدار |
 |---|---|
-| رکورد DNS | `A node → IP سرور`، **Proxied (ابر نارنجی)** |
-| SSL/TLS mode | **Flexible** |
+| DNS | رکورد `A` ساب‌دامنه به IP سرور جدید (اسکریپت IP را چاپ می‌کند)، **Proxied (ابر نارنجی)** |
+| SSL/TLS | **Flexible** |
 | Network → WebSockets | **On** |
 
-## تنظیمات کلاینت (v2rayN / موبایل)
+## کلاینت (v2rayN / موبایل)
+
+لینکی که اسکریپت آخر کار چاپ می‌کند را کپی کنید و در v2rayN با `Ctrl+V` وارد کنید. اگر دستی وارد می‌کنید:
 
 | فیلد | مقدار |
 |---|---|
-| Protocol | VLESS |
-| Address | `node.helpforyou.ir` |
+| Address / SNI / Host | دامنه شما |
 | Port | `443` |
-| UUID | همان UUID سرور |
-| Encryption | `none` |
-| Transport | `ws` |
-| Path | `/api/v1/stream` |
-| Host | `node.helpforyou.ir` |
+| Transport | `ws`، Path: `/api/v1/stream` |
 | TLS | `tls` |
-| SNI | `node.helpforyou.ir` |
-| **Fingerprint** | **`firefox`** |
+| **Fingerprint** | **`firefox`** (بدون آن اینترنت خانگی اتصال‌ها را ریست می‌کند) |
 | ALPN | `http/1.1` |
 
-نمونه لینک: [client/vless-link.template.txt](client/vless-link.template.txt)
+## مدیریت روی سرور
 
-> **fingerprint حتماً `firefox` باشد.** بدون آن (یا با `chrome`) اینترنت خانگی (مخابرات) حدود نصف اتصال‌ها را ریست می‌کند. در تست: بدون fingerprint ۳۵ ریست، chrome ۲۵ ریست، firefox صفر.
+Xray **سرویس ویندوز نیست**، یک Scheduled Task به نام `Xray` است. پس `Start-Service xray` کار نمی‌کند.
 
-## مدیریت روزمره روی سرور
-
-| کار | روش |
+| کار | دستور |
 |---|---|
-| ری‌استارت Xray | Task Scheduler ← تسک `XrayRestart` ← Run |
-| بررسی اجرا بودن | `Get-Process xray` |
-| برگرداندن کانفیگ قبلی | فایل‌های `config-backup-*.json` در `C:\Xray` |
-| به‌روزرسانی Xray | `install.ps1 -Uuid <UUID> -UpdateXray` |
+| روشن است؟ | `Get-Process xray` و `netstat -ano \| findstr :80` |
+| ری‌استارت | `Start-ScheduledTask XrayRestart` |
+| برگرداندن کانفیگ قبلی | فایل‌های `C:\Xray\config-backup-*.json` |
+| به‌روزرسانی Xray | همان دستور نصب + `-UpdateXray` |
 
-## محدودیت شناخته‌شده
+## خطاهای رایج
 
-Gemini و AI Studio با WARP روی سرورهای Hostkey باز **نمی‌شوند**: گوگل IP خروجی WARP را «روسیه» می‌بیند. برای این دو باید سرور از شرکتی غیر روسی باشد (یا خروجی جداگانه برای این دامنه‌ها). Google Pay و بقیه سرویس‌های گوگل با WARP کار می‌کنند.
+| خطا | علت و راه‌حل |
+|---|---|
+| کلاینت خطای `-1` می‌دهد | UUID سرور با کلاینت یکی نیست. نصب را با UUID کلاینت دوباره اجرا کنید. |
+| `Port 80 is used by ...` | برنامه دیگری (مثلاً IIS) پورت را گرفته. پیام خطا دستور توقفش را می‌گوید. |
+| `Run PowerShell as Administrator` | PowerShell را با راست‌کلیک ← Run as Administrator باز کنید. |
+| Gemini «کشور پشتیبانی نمی‌شود» | IP سرور یا WARP از نظر گوگل در کشور تحریمی است (مثلاً سرورهای Hostkey). سرور از شرکت دیگری بگیرید یا `-NoWarp` را امتحان کنید. |

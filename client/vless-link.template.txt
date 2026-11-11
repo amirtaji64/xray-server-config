@@ -1,1 +1,0 @@
-vless://<UUID>@node.helpforyou.ir:443?encryption=none&security=tls&sni=node.helpforyou.ir&fp=firefox&alpn=http%2F1.1&type=ws&host=node.helpforyou.ir&path=%2Fapi%2Fv1%2Fstream#Germany
