@@ -155,9 +155,10 @@ if ($SkipTask) {
 
   $a = New-ScheduledTaskAction -Execute $xray -Argument "run -c `"$cfgPath`"" -WorkingDirectory $InstallDir
   $t = New-ScheduledTaskTrigger -AtStartup
+  $watch = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)   # watchdog: restart within 1 min if it dies
   $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
          -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
-  Register-ScheduledTask -TaskName 'Xray' -Action $a -Trigger $t -Settings $s -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+  Register-ScheduledTask -TaskName 'Xray' -Action $a -Trigger @($t, $watch) -Settings $s -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
 
   $restart = Join-Path $InstallDir 'restart.ps1'
   'Stop-Process -Name xray -Force -ErrorAction SilentlyContinue; Start-Sleep 2; Start-ScheduledTask -TaskName Xray' | Set-Content $restart -Encoding ascii
