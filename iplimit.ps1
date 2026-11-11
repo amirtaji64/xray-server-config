@@ -49,8 +49,13 @@ function Get-Limits {
   # returns @{ email = limit } for enabled accounts with a device limit
   $r = Panel '/panel/api/clients/list'
   if (-not $r) { return $null }
+  # The panel greys out "IP Limit" on Windows (no fail2ban), so the device count can also be typed
+  # into the editable "HWID Limit" field; whichever is set is used.
   $m = @{}
-  foreach ($c in $r.obj) { if ($c.enable -and $c.limitIp -gt 0) { $m[$c.email] = [int]$c.limitIp } }
+  foreach ($c in $r.obj) {
+    $n = if ($c.limitIp -gt 0) { [int]$c.limitIp } else { [int]$c.limitHwid }
+    if ($c.enable -and $n -gt 0) { $m[$c.email] = $n }
+  }
   return $m
 }
 
